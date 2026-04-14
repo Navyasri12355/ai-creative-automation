@@ -2,21 +2,19 @@
 
 AI-powered social media creative generator for Indian brands — festivals, occasions, multilingual content.
 
-## Tech Stack (Student-friendly, mostly free)
+## Tech Stack 
 
-| Layer | Tech | Free tier |
-|---|---|---|
-| Frontend | Next.js 14 + Tailwind CSS | Vercel free |
-| Backend | FastAPI (Python 3.11) | Railway / Render free |
-| Database | Supabase (PostgreSQL) | 500 MB free |
-| Storage | Supabase Storage | 1 GB free |
-| Auth | Supabase Auth | Free |
-| AI text | Anthropic Claude API | Pay-per-use ~$0.001/call |
-| AI image | Replicate (Stable Diffusion) | ~$0.003/image |
-| Email | Resend | 100 emails/day free |
-| Cache/Queue | Upstash Redis | 10k req/day free |
-
-**Estimated cost for student use: < $2/month**
+| Layer | Tech | 
+|---|---|
+| Frontend | Next.js 14 + Tailwind CSS |
+| Backend | FastAPI (Python 3.11) |
+| Database | Supabase (PostgreSQL) |
+| Storage | Supabase Storage | 
+| Auth | Supabase Auth | 
+| AI text | Anthropic Claude API |
+| AI image | Replicate (Stable Diffusion) |
+| Email | Resend | 
+| Cache/Queue | Upstash Redis | 
 
 ## Prerequisites
 
@@ -131,7 +129,7 @@ indian-social-platform/
     └── .env.local.example
 ```
 
-## Deployment (Free)
+## Deployment
 
 ### Backend → Railway
 ```bash
