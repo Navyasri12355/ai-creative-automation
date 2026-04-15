@@ -5,8 +5,8 @@ from app.api import auth, brands, creatives, festivals, analytics
 from app.services.scheduler import start_scheduler, stop_scheduler
 
 app = FastAPI(
-    title="Indian Social Media Platform API",
-    description="AI-powered social media creative generator for Indian brands",
+    title="IndiSocial API",
+    description="AI-powered social media creative generator for Indian brands (100% FREE stack)",
     version="1.0.0",
 )
 
@@ -38,4 +38,9 @@ async def shutdown_event():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "environment": settings.environment}
+    return {
+        "status": "ok",
+        "environment": settings.environment,
+        "ai_text": "groq" if settings.groq_api_key else "fallback",
+        "ai_image": "pollinations.ai (free)",
+    }
