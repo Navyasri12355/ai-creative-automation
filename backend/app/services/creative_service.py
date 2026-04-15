@@ -12,7 +12,7 @@ from app.models.schemas import CreativeGenerateRequest, CreativeOut, GeneratedIm
 from app.services.ai_service import (
     generate_creative_text,
     build_image_prompt,
-    generate_image_replicate,
+    generate_image_free,
     generate_placeholder_image_url,
 )
 from app.services.image_composer import compose_creative
@@ -80,7 +80,7 @@ async def generate_creative(
         platform_str = platform.value if hasattr(platform, "value") else platform
 
         # Try Replicate first, fall back to placeholder
-        bg_url = await generate_image_replicate(prompt, negative)
+        bg_url = await generate_image_free(prompt, negative)
         if not bg_url:
             bg_url = generate_placeholder_image_url(platform_str, festival_name or "general", brand["name"])
 
