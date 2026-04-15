@@ -125,14 +125,14 @@ ai-creative-automation/
 
 ## Free Deployment
 
-### Backend → Render (FREE)
-1. Go to https://render.com (free tier, no card)
+### Backend → Render
+1. Go to https://render.com
 2. Create a new Web Service → connect your GitHub repo
 3. Build command: `pip install -r requirements.txt`
 4. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 5. Add environment variables from `.env.example`
 
-### Frontend → Vercel (FREE)
+### Frontend → Vercel
 ```bash
 npm i -g vercel
 vercel --prod
@@ -154,4 +154,3 @@ pytest tests/ -v
 | Pollinations.ai | Unlimited image generation |
 | Vercel | 100GB bandwidth/month |
 | Render | 750 hours/month |
-| **Total** | **₹0 / $0 per month** |
