@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sora: "Sora", sans-serif;
+  --font-devanagari: "Noto Sans Devanagari", sans-serif;
+
+  /* Brand palette */
+  --saffron: #ff6b2b;
+  --saffron-light: #ff8c55;
+  --marigold: #ffb830;
+  --emerald: #00c48c;
+  --indigo: #4361ee;
+  --surface: #18181b;
+  --surface-2: #27272a;
+  --border: rgba(255 255 255 / 0.08);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@layer base {
+  body {
+    background-color: #0c0c0e;
+  }
+
+  ::selection {
+    background: var(--saffron);
+    color: #000;
+  }
+}
+
+@layer utilities {
+  .font-sora {
+    font-family: var(--font-sora);
+  }
+  .font-devanagari {
+    font-family: var(--font-devanagari);
+  }
+
+  .gradient-saffron {
+    background: linear-gradient(135deg, var(--saffron) 0%, var(--marigold) 100%);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, var(--saffron) 0%, var(--marigold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass {
+    background: rgba(255 255 255 / 0.04);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+  }
+
+  .glow-saffron {
+    box-shadow: 0 0 40px rgba(255, 107, 43, 0.25);
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255 255 255 / 0.15); border-radius: 3px; }
+
+/* Noise texture overlay */
+.noise::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  border-radius: inherit;
+}
