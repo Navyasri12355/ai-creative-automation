@@ -1,21 +1,19 @@
 """
-AI service: Claude for multilingual text, Replicate for image generation.
-Falls back gracefully if Replicate key is absent.
+AI service: Groq (free) for multilingual text, Pollinations.ai (free) for image generation.
+All services used are completely FREE — no credit card needed anywhere.
+
+Groq free tier: 30 RPM, 14,400 requests/day, models like llama-3.3-70b-versatile.
+Pollinations.ai: unlimited free image generation, no API key.
 """
 
-import anthropic
 import httpx
+import json
+import logging
 from typing import Optional
+from urllib.parse import quote
 from app.core.config import settings
 
-_claude_client: Optional[anthropic.Anthropic] = None
-
-
-def get_claude() -> anthropic.Anthropic:
-    global _claude_client
-    if _claude_client is None:
-        _claude_client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-    return _claude_client
+logger = logging.getLogger(__name__)
 
 
 SYSTEM_PROMPT = """You are a creative social media copywriter specialising in Indian brands and cultural occasions.
@@ -36,6 +34,7 @@ def generate_creative_text(
     cultural_elements: dict,
 ) -> dict[str, str]:
     """
+    Generate multilingual social media text using Groq (free tier).
     Returns a dict: { "en": "...", "hi": "...", ... }
     """
     festival_context = ""
@@ -67,24 +66,75 @@ Include relevant emojis. Do not include hashtags.
 Example format:
 {{"en": "Wishing you joy...", "hi": "आपको शुभकामनाएं..."}}
 
-Only return the JSON. No other text."""
+Only return the JSON. No other text. No markdown code fences."""
 
-    client = get_claude()
-    message = client.messages.create(
-        model="claude-3-5-haiku-20241022",
-        max_tokens=800,
-        messages=[{"role": "user", "content": prompt}],
-        system=SYSTEM_PROMPT,
+    # Use Groq API (free tier: 30 RPM, 14,400 RPD)
+    if settings.groq_api_key:
+        try:
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            payload = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                "temperature": 0.8,
+                "max_tokens": 800,
+                "response_format": {"type": "json_object"},
+            }
+            headers = {
+                "Authorization": f"Bearer {settings.groq_api_key}",
+                "Content-Type": "application/json",
+            }
+
+            with httpx.Client(timeout=30.0) as client:
+                resp = client.post(url, json=payload, headers=headers)
+                resp.raise_for_status()
+                data = resp.json()
+
+            text = data["choices"][0]["message"]["content"].strip()
+            # Handle if model wraps response in ```json
+            if text.startswith("```"):
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+            return json.loads(text.strip())
+
+        except Exception as e:
+            logger.error(f"Groq API error: {e}")
+            # Fall through to fallback
+
+    # Fallback: generate basic text locally (no API needed)
+    logger.warning("No Groq API key — using local fallback text generation")
+    return _generate_fallback_text(
+        brand_name, festival_name, occasion_type, tone, languages, cultural_elements
     )
 
-    import json
-    text = message.content[0].text.strip()
-    # Handle if Claude wraps in ```json
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-    return json.loads(text.strip())
+
+def _generate_fallback_text(
+    brand_name: str,
+    festival_name: Optional[str],
+    occasion_type: str,
+    tone: str,
+    languages: list[str],
+    cultural_elements: dict,
+) -> dict[str, str]:
+    """Generate basic text without any API — total fallback."""
+    texts = {}
+    greetings = cultural_elements.get("greetings", {})
+
+    for lang in languages:
+        if lang in greetings:
+            texts[lang] = f"{greetings[lang]} ✨ From {brand_name} with love! 🙏"
+        elif festival_name:
+            texts[lang] = (
+                f"Happy {festival_name}! 🎉 {brand_name} wishes you joy and prosperity. ✨"
+            )
+        else:
+            texts[lang] = (
+                f"Something special from {brand_name}! ✨ Stay tuned for amazing things ahead. 🚀"
+            )
+    return texts
 
 
 def build_image_prompt(
@@ -95,8 +145,8 @@ def build_image_prompt(
     brand_colors: list[dict],
     cultural_elements: dict,
     custom_message: Optional[str],
-) -> str:
-    """Build a detailed Stable Diffusion prompt for Indian social media creatives."""
+) -> tuple[str, str]:
+    """Build a detailed image prompt for Pollinations.ai (free, no API key)."""
     color_desc = ""
     if brand_colors:
         hex_list = [c["hex"] for c in brand_colors[:3]]
@@ -134,61 +184,34 @@ def build_image_prompt(
     return prompt, negative
 
 
-async def generate_image_replicate(
+async def generate_image_free(
     prompt: str,
     negative_prompt: str,
     width: int = 1080,
     height: int = 1080,
 ) -> Optional[str]:
     """
-    Generate image via Replicate API.
-    Returns image URL or None if unavailable.
+    Generate image via Pollinations.ai — 100% FREE, NO API KEY needed.
+    Returns a direct image URL.
     """
-    if not settings.replicate_api_token:
-        return None
-
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            # Start prediction
-            resp = await client.post(
-                "https://api.replicate.com/v1/models/stability-ai/stable-diffusion-3/predictions",
-                headers={
-                    "Authorization": f"Bearer {settings.replicate_api_token}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "input": {
-                        "prompt": prompt,
-                        "negative_prompt": negative_prompt,
-                        "width": min(width, 1024),
-                        "height": min(height, 1024),
-                        "num_inference_steps": 28,
-                        "guidance_scale": 7.5,
-                    }
-                },
-            )
-            resp.raise_for_status()
-            prediction = resp.json()
-            prediction_id = prediction["id"]
-
-            # Poll for result (max 60s)
-            for _ in range(30):
-                import asyncio
-                await asyncio.sleep(2)
-                poll = await client.get(
-                    f"https://api.replicate.com/v1/predictions/{prediction_id}",
-                    headers={"Authorization": f"Bearer {settings.replicate_api_token}"},
-                )
-                data = poll.json()
-                if data["status"] == "succeeded":
-                    return data["output"][0]
-                elif data["status"] == "failed":
-                    return None
-
+        # Pollinations.ai provides free AI image generation via URL
+        w = min(width, 1024)
+        h = min(height, 1024)
+        encoded_prompt = quote(prompt)
+        image_url = (
+            f"https://image.pollinations.ai/prompt/{encoded_prompt}"
+            f"?width={w}&height={h}&nologo=true&seed={abs(hash(prompt)) % 10000}"
+        )
+        # Verify the URL is reachable
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.head(image_url, follow_redirects=True)
+            if resp.status_code < 400:
+                return image_url
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Replicate error: {e}")
-        return None
+        logger.warning(f"Pollinations.ai error: {e}")
+
+    return None
 
 
 def generate_placeholder_image_url(
@@ -207,6 +230,5 @@ def generate_placeholder_image_url(
         "twitter-post": "1200/675",
     }
     size = sizes.get(platform, "1080/1080")
-    # Seed based on name for consistency
     seed = abs(hash(f"{brand_name}{festival_name}{platform}")) % 1000
     return f"https://picsum.photos/seed/{seed}/{size}"
