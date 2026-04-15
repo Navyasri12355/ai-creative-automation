@@ -1,5 +1,6 @@
 """
 APScheduler jobs for festival reminders and automated suggestions.
+Email notifications removed (Resend was paid) — uses DB notifications only.
 """
 
 import logging
@@ -11,7 +12,7 @@ scheduler = AsyncIOScheduler()
 
 
 async def check_upcoming_festivals():
-    """Runs daily: find festivals in next 7 days and notify brand admins."""
+    """Runs daily: find festivals in next 7 days and notify brand admins via DB."""
     from app.utils.festivals_data import get_upcoming_festivals
     from app.core.database import get_supabase_admin
 
@@ -27,7 +28,7 @@ async def check_upcoming_festivals():
 
     for admin in admins.data or []:
         for festival in upcoming[:3]:  # max 3 reminders per day
-            # Store notification in DB
+            # Store notification in DB (free — no email service needed)
             db.table("notifications").insert({
                 "user_id": admin["id"],
                 "brand_id": admin.get("brand_id"),
@@ -38,28 +39,7 @@ async def check_upcoming_festivals():
                 "is_read": False,
             }).execute()
 
-    # Send emails if Resend is configured
-    try:
-        from app.core.config import settings
-        if settings.resend_api_key:
-            import resend
-            resend.api_key = settings.resend_api_key
-            for admin in (admins.data or [])[:10]:  # cap at 10
-                names = ", ".join(f["name"] for f in upcoming[:3])
-                resend.Emails.send({
-                    "from": settings.email_from,
-                    "to": admin["email"],
-                    "subject": f"🎉 Upcoming: {upcoming[0]['name']} — Create your creatives!",
-                    "html": f"""
-<h2>Festival Alert! 🎊</h2>
-<p>Hi {admin['name']},</p>
-<p>The following festivals are coming up soon:</p>
-<ul>{''.join(f"<li><strong>{f['name']}</strong> — {f['days_until']} days away</li>" for f in upcoming[:3])}</ul>
-<p><a href="https://your-app.vercel.app/dashboard/creatives/new">Generate your creatives now →</a></p>
-                    """,
-                })
-    except Exception as e:
-        logger.warning(f"Email send failed: {e}")
+    logger.info(f"Sent {len(admins.data or [])} DB notifications for upcoming festivals")
 
 
 def start_scheduler():
