@@ -32,7 +32,7 @@ AI-powered social media creative generator for Indian brands — festivals, occa
 
 ```bash
 git clone <repo>
-cd indian-social-platform
+cd ai-creative-automation
 ```
 
 ### 2. Backend setup
