@@ -1,6 +1,6 @@
-# IndiSocial — AI Social Media Platform
+# AI Social Media Platform
 
-AI-powered social media creative generator for Indian brands — festivals, occasions, multilingual content.
+AI-powered social media creative generator for Indian brands - festivals, occasions, multilingual content.
 
 
 ## Tech Stack
