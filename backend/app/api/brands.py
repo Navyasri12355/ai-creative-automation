@@ -33,7 +33,7 @@ async def create_brand(payload: BrandCreate, current_user: dict = Depends(get_cu
     # Associate brand with user
     db.table("users").update({"brand_id": brand_id}).eq("id", current_user["user_id"]).execute()
 
-    return BrandOut(**record, created_at=datetime.utcnow())
+    return BrandOut(**record)
 
 
 @router.get("", response_model=list[BrandOut])

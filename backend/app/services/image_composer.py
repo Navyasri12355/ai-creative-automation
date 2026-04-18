@@ -45,8 +45,12 @@ async def compose_creative(
     # 1. Background
     if background_url:
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
                 resp = await client.get(background_url)
+                resp.raise_for_status()
+                content_type = resp.headers.get("content-type", "")
+                if not content_type.startswith("image/"):
+                    raise ValueError(f"Expected image, got {content_type}")
                 img = Image.open(BytesIO(resp.content)).convert("RGBA")
                 img = img.resize((width, height), Image.LANCZOS)
         except Exception as e:
@@ -141,12 +145,13 @@ def _hex_to_rgb(hex_color: str) -> tuple:
 def _draw_text_centered(draw, text, y_center, width, font_size, color):
     """Draw text horizontally centred at given y position."""
     try:
-        # Try to use a bundled font; fall back to PIL default
+        # Try to use a bundled font; fall back to arial.ttf
         font_path = os.path.join(os.path.dirname(__file__), "..", "utils", "DejaVuSans-Bold.ttf")
         if os.path.exists(font_path):
             font = ImageFont.truetype(font_path, font_size)
         else:
-            font = ImageFont.load_default()
+            # On Windows, arial.ttf is almost always available
+            font = ImageFont.truetype("arial.ttf", font_size)
     except Exception:
         font = ImageFont.load_default()
 

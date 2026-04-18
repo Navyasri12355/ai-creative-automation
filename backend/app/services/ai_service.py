@@ -203,10 +203,10 @@ async def generate_image_free(
             f"https://image.pollinations.ai/prompt/{encoded_prompt}"
             f"?width={w}&height={h}&nologo=true&seed={abs(hash(prompt)) % 10000}"
         )
-        # Verify the URL is reachable
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.head(image_url, follow_redirects=True)
-            if resp.status_code < 400:
+        # Verify the URL is reachable (use GET with stream to validate actual image)
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            resp = await client.head(image_url)
+            if resp.status_code < 400 and resp.headers.get("content-type", "").startswith("image/"):
                 return image_url
     except Exception as e:
         logger.warning(f"Pollinations.ai error: {e}")

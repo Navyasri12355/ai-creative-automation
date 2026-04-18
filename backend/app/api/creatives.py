@@ -58,6 +58,22 @@ async def get_creative(
     )
 
 
+@router.patch("/{creative_id}", response_model=CreativeOut)
+async def update_creative(
+    creative_id: str,
+    updates: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    valid_keys = {"texts"}
+    update_data = {k: v for k, v in updates.items() if k in valid_keys}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+        
+    db = get_supabase_admin()
+    db.table("creatives").update(update_data).eq("id", creative_id).execute()
+    return await get_creative(creative_id=creative_id, current_user=current_user)
+
+
 @router.patch("/{creative_id}/status")
 async def update_status(
     creative_id: str,

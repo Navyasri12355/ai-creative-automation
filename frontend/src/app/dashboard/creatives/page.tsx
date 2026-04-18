@@ -34,6 +34,9 @@ export default function CreativesPage() {
     const [generating, setGenerating] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [error, setError] = useState("");
+    const [selectedCreative, setSelectedCreative] = useState<Creative | null>(null);
+    const [editingTexts, setEditingTexts] = useState<Record<string, string>>({});
+    const [saving, setSaving] = useState(false);
 
     const [form, setForm] = useState({
         festival_id: "",
@@ -113,6 +116,20 @@ export default function CreativesPage() {
         }
     }
 
+    async function handleSaveTexts() {
+        if (!selectedCreative) return;
+        setSaving(true);
+        try {
+            const updated = await creatives.update(selectedCreative.id, { texts: editingTexts });
+            setAllCreatives((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+            setSelectedCreative(null);
+            setEditingTexts({});
+        } catch (err: any) {
+            alert(err.message ?? "Failed to save edits");
+        } finally {
+            setSaving(false);
+        }
+    }
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64 text-zinc-500 text-sm">
@@ -289,14 +306,29 @@ export default function CreativesPage() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {allCreatives.map((c) => (
-                        <div key={c.id} className="glass rounded-2xl overflow-hidden group">
+                        <div 
+                            key={c.id} 
+                            className="glass rounded-2xl overflow-hidden group cursor-pointer hover:border-[#ff6b2b]/30 border border-transparent transition-colors"
+                            onClick={() => {
+                                setSelectedCreative(c);
+                                setEditingTexts(c.texts);
+                            }}
+                        >
                             {/* Image preview */}
                             {c.images[0] && (
                                 <div className="aspect-square bg-zinc-900 relative overflow-hidden">
                                     <img
                                         src={c.images[0].url}
                                         alt={c.occasion_type}
+                                        loading="lazy"
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.style.display = 'none';
+                                            if (target.parentElement) {
+                                                target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-600/30 to-purple-600/30"><span class="text-5xl">🎨</span></div>';
+                                            }
+                                        }}
                                     />
                                 </div>
                             )}
@@ -330,6 +362,99 @@ export default function CreativesPage() {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* View/Edit Modal */}
+            {selectedCreative && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col md:flex-row">
+                        {/* Image Side */}
+                        <div className="w-full md:w-1/2 bg-zinc-950 flex flex-col items-center justify-center p-6 relative">
+                            {selectedCreative.images[0] ? (
+                                <img
+                                    src={selectedCreative.images[0].url}
+                                    alt="Creative"
+                                    className="max-w-full max-h-[40vh] md:max-h-[70vh] object-contain rounded-xl shadow-2xl"
+                                    onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        if (target.parentElement) {
+                                            target.parentElement.innerHTML = '<div class="w-full aspect-square flex items-center justify-center bg-gradient-to-br from-orange-600/30 to-purple-600/30 rounded-xl"><span class="text-6xl">🎨</span><p class="mt-4 text-zinc-400 font-medium">Image unavailable</p></div>';
+                                        }
+                                    }}
+                                />
+                            ) : (
+                                <div className="w-full aspect-square flex items-center justify-center bg-zinc-900 rounded-xl">
+                                    <span className="text-4xl text-zinc-600">No Image</span>
+                                </div>
+                            )}
+                            <div className="absolute top-4 left-4 flex gap-2">
+                                {selectedCreative.platforms.map((p) => (
+                                    <span key={p} className="bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider text-white">
+                                        {p.replace("-", " ")}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Details & Edit Side */}
+                        <div className="w-full md:w-1/2 p-6 md:p-8 flex flex-col h-full bg-zinc-900/50">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 className="text-xl font-bold capitalize mb-1">{selectedCreative.occasion_type} Post</h3>
+                                    <p className="text-xs text-zinc-400">
+                                        Generated on {new Date(selectedCreative.generated_at).toLocaleDateString("en-US", { dateStyle: "medium" })}
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={() => setSelectedCreative(null)}
+                                    className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                                <div>
+                                    <h4 className="text-sm font-semibold text-zinc-300 mb-3 flex items-center gap-2">
+                                        <span className="text-xl">📝</span> Captions
+                                    </h4>
+                                    <div className="space-y-4">
+                                        {Object.entries(editingTexts).map(([lang, text]) => (
+                                            <div key={lang} className="glass rounded-xl p-4 border border-white/5">
+                                                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                                                    {lang === "en" ? "English" : lang === "hi" ? "Hindi" : lang}
+                                                </label>
+                                                <textarea
+                                                    value={text}
+                                                    onChange={(e) => setEditingTexts(prev => ({ ...prev, [lang]: e.target.value }))}
+                                                    className="w-full bg-transparent border-none focus:ring-0 p-0 text-sm text-zinc-200 resize-none min-h-[80px]"
+                                                    placeholder="Enter caption..."
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-6 mt-6 border-t border-white/10 flex gap-3">
+                                <button
+                                    onClick={() => setSelectedCreative(null)}
+                                    className="flex-1 py-3 rounded-xl border border-white/10 text-sm font-bold hover:bg-white/5 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveTexts}
+                                    disabled={saving}
+                                    className="flex-1 py-3 rounded-xl gradient-saffron text-black text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50"
+                                >
+                                    {saving ? "Saving..." : "Save Draft"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

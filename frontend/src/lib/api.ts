@@ -86,6 +86,11 @@ export const creatives = {
     request<{ id: string; status: string }>(`/creatives/${id}/status?status=${status}`, {
       method: "PATCH",
     }),
+  update: (id: string, updates: any) =>
+    request<Creative>(`/creatives/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    }),
   trackDownload: (id: string) =>
     request<{ ok: boolean }>(`/creatives/${id}/download`, { method: "POST" }),
   delete: (id: string) => request<void>(`/creatives/${id}`, { method: "DELETE" }),
