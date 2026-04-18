@@ -83,9 +83,9 @@ async def compose_creative(
 
     # 4. Main overlay text
     if overlay_text:
-        lines = _wrap_text(overlay_text, max_chars=30)
-        y_start = int(height * 0.62)
-        for i, line in enumerate(lines[:3]):
+        lines = _wrap_text(overlay_text, max_chars=35)
+        y_start = int(height * 0.58)
+        for i, line in enumerate(lines[:5]):
             _draw_text_centered(
                 draw,
                 line,
