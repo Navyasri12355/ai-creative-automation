@@ -1,21 +1,30 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
+import hashlib
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
 
 
+def _hash_password_input(password: str) -> str:
+    """Hash password with SHA-256 to handle passwords > 72 bytes (bcrypt limit)"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    """Hash password for storage"""
+    pre_hashed = _hash_password_input(password)
+    return bcrypt.hashpw(pre_hashed.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    """Verify password against stored hash"""
+    pre_hashed = _hash_password_input(plain)
+    return bcrypt.checkpw(pre_hashed.encode(), hashed.encode())
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
